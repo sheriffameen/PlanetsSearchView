@@ -1,7 +1,9 @@
 package com.example.searchviewandrecyclerview;
 
+import io.reactivex.Single;
 import retrofit2.Call;
 import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class PlanetClient {
@@ -23,6 +25,7 @@ public class PlanetClient {
             retrofit = new Retrofit.Builder()
                     .baseUrl(BASE_URL)
                     .addConverterFactory(GsonConverterFactory.create())
+                    .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                     .build();
         }
     }
@@ -31,7 +34,7 @@ public class PlanetClient {
         return retrofit.create(PlanetService.class);
     }
 
-    public Call<PlanetResponse> getPlanetResponse(){
+    public Single<PlanetResponse> getPlanetResponse(){
         return getPlanetService().getPlanets();
     }
 
