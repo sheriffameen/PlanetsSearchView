@@ -10,15 +10,23 @@ import android.support.v7.widget.SearchView;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.reactivex.Scheduler;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity implements Callback<PlanetResponse>, SearchView.OnQueryTextListener {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener {
     private RecyclerView recyclerView;
     private List<Planet> planets;
     private PlanetAdapter planetAdapter;
     private SearchView searchView;
+    private CompositeDisposable compositeDisposable;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,33 +36,30 @@ public class MainActivity extends AppCompatActivity implements Callback<PlanetRe
         recyclerView = findViewById(R.id.planetsRecycler_view);
         searchView = findViewById(R.id.searchView);
         searchView.setOnQueryTextListener(this);
+        compositeDisposable = new CompositeDisposable();
 
         getPlanets();
     }
 
 
     public void getPlanets(){
-        Call<PlanetResponse> planetResponseCall = PlanetClient.getInstance().getPlanetResponse();
-        planetResponseCall.enqueue(this);
+        Disposable disposable = PlanetClient.getInstance()
+                .getPlanetResponse().subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .map(response -> response.getPlanets())
+                .subscribe(planets -> {
+                    this.planets = planets;
+                    planetAdapter = new PlanetAdapter(planets);
+
+                    recyclerView.setAdapter(planetAdapter);
+                    recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+
+                },error ->error.printStackTrace());
+
+        compositeDisposable.add(disposable);
     }
 
-    @Override
-    public void onResponse(Call<PlanetResponse> call, Response<PlanetResponse> response) {
-        PlanetResponse planetResponse = response.body();
-         planets = planetResponse.getPlanets();
 
-         planetAdapter = new PlanetAdapter(planets);
-
-        recyclerView.setAdapter(planetAdapter);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
-
-
-    }
-
-    @Override
-    public void onFailure(Call<PlanetResponse> call, Throwable t) {
-
-    }
 
     @Override
     public boolean onQueryTextSubmit(String s) {
